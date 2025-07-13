@@ -333,6 +333,11 @@ export default function Lobby() {
           {room.players?.map((player) => (
             <View key={player.id} style={styles.playerItem}>
               <View style={styles.playerContent}>
+                {player.isHost && (
+                  <View style={styles.hostIndicator}>
+                    <View style={styles.hostBadge} />
+                  </View>
+                )}
                 <View style={styles.playerPhotoContainer}>
                   {player.profilePhoto ? (
                     <Image
@@ -351,7 +356,6 @@ export default function Lobby() {
                 <View style={styles.playerInfo}>
                   <Text style={styles.playerName}>
                     {player.name}
-                    {player.isHost && " (Oda Sahibi)"}
                     {player.id === currentPlayer.id && " (Sen)"}
                   </Text>
                 </View>
@@ -362,9 +366,10 @@ export default function Lobby() {
 
         <Card>
           <Text style={styles.sectionTitle}>Oyun Bilgileri</Text>
+
           <View style={styles.gameInfoRow}>
             <Text style={styles.gameInfoText}>
-              • Oyuncular: {room.players?.length || 0}/10
+              • Oyun Süresi: {Math.floor((room.timer || 480) / 60)} dakika
             </Text>
           </View>
 
@@ -511,7 +516,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   playerPhotoInitial: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "bold",
     color: "#6b7280",
   },
@@ -522,6 +527,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#374151",
     fontWeight: "500",
+  },
+  hostIndicator: {
+    width: 20,
+    height: 20,
+    backgroundColor: "#fbbf24",
+    borderRadius: 10,
+    marginRight: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  hostBadge: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#ffffff",
   },
   buttonContainer: {
     marginTop: 20,
