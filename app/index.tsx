@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
 import { GameService } from "../services/gameService";
 import { User } from "../services/UserService";
 
@@ -96,15 +95,6 @@ export default function Index() {
             style={styles.button}
           />
         </View>
-
-        <Card style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Spyfall Nasıl Oynanır?</Text>
-          <Text style={styles.infoText}>
-            • Herkes aynı lokasyonu bilir, sadece 1 kişi casus{"\n"}• Sorular
-            sorarak casusları bulmaya çalışın{"\n"}• Casus ise lokasyonu tahmin
-            etmeye çalışın{"\n"}• Oyunun sonunda oylama yapılır
-          </Text>
-        </Card>
       </View>
     </SafeAreaView>
   );

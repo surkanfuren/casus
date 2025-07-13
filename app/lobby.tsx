@@ -291,8 +291,8 @@ export default function Lobby() {
       />
       <ScrollView style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Oyun Lobisi</Text>
-          <Text style={styles.subtitle}>Oda Kodu: {inviteCode}</Text>
+          <Text style={styles.title}>Lobi</Text>
+          <Text style={styles.subtitle}>Davet kodu: {inviteCode}</Text>
           <Button
             title="Oda Kodunu Kopyala"
             onPress={copyInviteCode}
