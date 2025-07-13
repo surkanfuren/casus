@@ -218,7 +218,7 @@ export default function Game() {
           <View style={styles.loadingActions}>
             <Button
               title="Lobiye Dön"
-              onPress={() => router.push("/")}
+              onPress={() => router.replace("/")}
               variant="secondary"
               size="large"
               style={styles.backButton}

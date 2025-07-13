@@ -87,11 +87,11 @@ export default function Results() {
   }, [room, playerId]);
 
   const goHome = () => {
-    router.push("/");
+    router.replace("/");
   };
 
   const playAgain = () => {
-    router.push("/");
+    router.replace("/");
   };
 
   // Start loading animation
@@ -167,7 +167,7 @@ export default function Results() {
           <View style={styles.loadingActions}>
             <Button
               title="Ana Sayfaya Dön"
-              onPress={() => router.push("/")}
+              onPress={() => router.replace("/")}
               variant="secondary"
               size="large"
               style={styles.backButton}

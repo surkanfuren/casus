@@ -42,7 +42,7 @@ export default function Lobby() {
   useEffect(() => {
     if (!roomId || !playerId) {
       console.error("Missing roomId or playerId");
-      router.push("/");
+      router.replace("/");
       return;
     }
 
@@ -60,7 +60,7 @@ export default function Lobby() {
         if (error) {
           console.error("Error fetching lobby room:", error);
           Alert.alert("Hata", "Oda verisi yüklenemedi");
-          router.push("/");
+          router.replace("/");
           return;
         }
 
@@ -95,7 +95,7 @@ export default function Lobby() {
       } catch (err) {
         console.error("Lobby room fetch error:", err);
         Alert.alert("Hata", "Odaya bağlanılamadı");
-        router.push("/");
+        router.replace("/");
       }
     };
 
@@ -133,7 +133,7 @@ export default function Lobby() {
         // Only navigate away if we're sure the player was removed and room still exists
         if (players.length > 0) {
           Alert.alert("Bilgi", "Odadan çıkarıldınız");
-          router.push("/");
+          router.replace("/");
           return;
         }
       }
@@ -199,12 +199,12 @@ export default function Lobby() {
     try {
       await GameService.leaveRoom(room.id, currentPlayer.id);
       console.log("Successfully left room");
-      router.push("/");
+      router.replace("/");
     } catch (error: any) {
       console.error("Leave room error:", error);
       Alert.alert("Hata", error.message || "Odadan çıkılırken bir hata oluştu");
       // Still try to navigate back in case of error
-      router.push("/");
+      router.replace("/");
     } finally {
       setIsLeaving(false);
     }
@@ -361,7 +361,7 @@ export default function Lobby() {
           <View style={styles.loadingActions}>
             <Button
               title="Ana Sayfaya Dön"
-              onPress={() => router.push("/")}
+              onPress={() => router.replace("/")}
               variant="secondary"
               size="large"
               style={styles.backButton}
