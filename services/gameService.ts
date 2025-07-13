@@ -277,6 +277,63 @@ export class GameService {
   }
 
   /**
+   * Update room timer (host only)
+   */
+  static async updateRoomTimer(
+    roomId: string,
+    hostId: string,
+    timerMinutes: number
+  ): Promise<void> {
+    const user = await this.getCurrentUser();
+
+    if (user.id !== hostId) {
+      throw new Error("Only the host can change the timer");
+    }
+
+    const timerSeconds = timerMinutes * 60;
+
+    try {
+      // Get room data first to verify host
+      const { data: roomData, error: fetchError } = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("id", roomId)
+        .single();
+
+      if (fetchError || !roomData) {
+        throw new Error("Room not found");
+      }
+
+      if (roomData.host_id !== user.id) {
+        throw new Error("Only the host can change the timer");
+      }
+
+      if (roomData.game_state !== "waiting") {
+        throw new Error("Cannot change timer after game has started");
+      }
+
+      // Update room timer
+      const { error: updateError } = await supabase
+        .from("rooms")
+        .update({
+          timer: timerSeconds,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", roomId);
+
+      if (updateError) {
+        console.error("Error updating room timer:", updateError);
+        throw new Error("Failed to update timer");
+      }
+
+      console.log("Timer updated successfully to", timerMinutes, "minutes");
+    } catch (error) {
+      console.error("Error in updateRoomTimer:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Start the game
    */
   static async startGame(roomId: string, hostId: string): Promise<void> {

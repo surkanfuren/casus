@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,9 +31,13 @@ export default function Lobby() {
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [isUpdatingTimer, setIsUpdatingTimer] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [loadingOpacity] = useState(new Animated.Value(0));
+
+  // Timer options in minutes
+  const TIMER_OPTIONS = [5, 8, 10, 15];
 
   useEffect(() => {
     if (!roomId || !playerId) {
@@ -208,6 +213,25 @@ export default function Lobby() {
     }
   }, [room, currentPlayer, loadingOpacity]);
 
+  const updateTimer = async (minutes: number) => {
+    if (!room || !currentPlayer?.isHost) {
+      Alert.alert("Hata", "Sadece oda sahibi süreyi değiştirebilir");
+      return;
+    }
+
+    setIsUpdatingTimer(true);
+    try {
+      await GameService.updateRoomTimer(room.id, room.hostId, minutes);
+      setToastMessage(`Oyun süresi ${minutes} dakika olarak güncellendi!`);
+      setShowToast(true);
+    } catch (error: any) {
+      Alert.alert("Hata", error.message || "Süre güncellenemedi");
+      console.error("Update timer error:", error);
+    } finally {
+      setIsUpdatingTimer(false);
+    }
+  };
+
   if (!room || !currentPlayer) {
     return (
       <SafeAreaView style={styles.container}>
@@ -338,10 +362,49 @@ export default function Lobby() {
 
         <Card>
           <Text style={styles.sectionTitle}>Oyun Bilgileri</Text>
-          <Text style={styles.gameInfo}>
-            • Oyuncular: {room.players?.length || 0}/10{"\n"}• Süre: 8 dakika
-            {"\n"}• Lokasyon: Oyun başlayınca açıklanacak
-          </Text>
+          <View style={styles.gameInfoRow}>
+            <Text style={styles.gameInfoText}>
+              • Oyuncular: {room.players?.length || 0}/10
+            </Text>
+          </View>
+
+          <View style={styles.timerSection}>
+            {currentPlayer?.isHost && (
+              <View style={styles.timerControls}>
+                <Text style={styles.timerControlLabel}>Oyun Süresi</Text>
+                <View style={styles.timerButtons}>
+                  {TIMER_OPTIONS.map((minutes) => (
+                    <TouchableOpacity
+                      key={minutes}
+                      style={[
+                        styles.timerButton,
+                        Math.floor((room.timer || 480) / 60) === minutes &&
+                          styles.timerButtonActive,
+                      ]}
+                      onPress={() => updateTimer(minutes)}
+                      disabled={isUpdatingTimer}
+                    >
+                      <Text
+                        style={[
+                          styles.timerButtonText,
+                          Math.floor((room.timer || 480) / 60) === minutes &&
+                            styles.timerButtonTextActive,
+                        ]}
+                      >
+                        {minutes}dk
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {isUpdatingTimer && (
+                  <View style={styles.updatingTimer}>
+                    <ActivityIndicator size="small" color="#6366f1" />
+                    <Text style={styles.updatingText}>Güncelleniyor...</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         </Card>
 
         <View style={styles.buttonContainer}>
@@ -459,11 +522,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#374151",
     fontWeight: "500",
-  },
-  gameInfo: {
-    fontSize: 16,
-    color: "#6b7280",
-    lineHeight: 24,
   },
   buttonContainer: {
     marginTop: 20,
@@ -583,12 +641,77 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginBottom: 5,
   },
+  gameInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
   gameInfoText: {
     fontSize: 14,
     color: "#6b7280",
+    flex: 1,
+  },
+  timerSection: {
+    marginTop: 10,
+  },
+  timerLabel: {
+    fontSize: 16,
+    color: "#4b5563",
+    marginBottom: 8,
+  },
+  timerControls: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+  },
+  timerControlLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginBottom: 5,
     textAlign: "center",
   },
+  timerButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+  },
+  timerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#f9fafb",
+    margin: 2,
+  },
+  timerButtonActive: {
+    backgroundColor: "#6366f1",
+    borderColor: "#6366f1",
+  },
+  timerButtonText: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  timerButtonTextActive: {
+    color: "#ffffff",
+    fontWeight: "600",
+  },
+  updatingTimer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  updatingText: {
+    marginLeft: 5,
+    fontSize: 14,
+    color: "#6b7280",
+  },
   loadingActions: {
+    width: "100%",
     marginTop: 20,
   },
   backButton: {
