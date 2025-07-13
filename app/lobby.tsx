@@ -101,29 +101,44 @@ export default function Lobby() {
 
     fetchRoomData();
 
-    // Subscribe to room updates
+    // Subscribe to room updates with enhanced error handling
+    console.log("Setting up real-time subscription for room:", roomId);
     const subscription = GameService.subscribeToRoom(roomId, (updatedRoom) => {
-      console.log("Room update received:", updatedRoom);
+      console.log("Room update received in lobby:", updatedRoom);
 
-      // Validate room data before processing
-      if (!updatedRoom || !updatedRoom.id || !updatedRoom.players) {
-        console.warn("Invalid room data received, ignoring:", updatedRoom);
+      // More flexible validation - only check for essential fields
+      if (!updatedRoom || !updatedRoom.id) {
+        console.warn(
+          "Invalid room data received (missing room or id):",
+          updatedRoom
+        );
         return;
       }
 
+      // Handle empty players array properly
+      const players = Array.isArray(updatedRoom.players)
+        ? updatedRoom.players
+        : [];
+      console.log("Processing room update with", players.length, "players");
+
+      // Update room state immediately for real-time sync
       setRoom(updatedRoom);
 
       // Find current player in the updated room
-      const player = updatedRoom.players.find((p) => p.id === playerId);
+      const player = players.find((p) => p.id === playerId);
       if (!player) {
-        console.warn("Player not found in room, might have been removed");
-        // Player might have been removed from the room
-        Alert.alert("Bilgi", "Odadan çıkarıldınız");
-        router.push("/");
-        return;
+        console.warn(
+          "Current player not found in updated room, might have been removed"
+        );
+        // Only navigate away if we're sure the player was removed and room still exists
+        if (players.length > 0) {
+          Alert.alert("Bilgi", "Odadan çıkarıldınız");
+          router.push("/");
+          return;
+        }
       }
 
-      setCurrentPlayer(player);
+      setCurrentPlayer(player || null);
 
       // If game started, navigate to game screen
       if (updatedRoom.gameState === "playing") {
@@ -137,9 +152,20 @@ export default function Lobby() {
       }
     });
 
+    // Monitor subscription status
+    subscription.subscribe((status) => {
+      console.log("Subscription status changed:", status);
+      if (status === "SUBSCRIBED") {
+        console.log("Successfully subscribed to room updates");
+      } else if (status === "CHANNEL_ERROR") {
+        console.error("Subscription error - attempting to reconnect");
+        // Could add reconnection logic here if needed
+      }
+    });
+
     // Clean up subscription on unmount
     return () => {
-      console.log("Cleaning up lobby subscription");
+      console.log("Cleaning up lobby subscription for room:", roomId);
       subscription.unsubscribe();
     };
   }, [roomId, playerId]);
@@ -232,6 +258,47 @@ export default function Lobby() {
     }
   };
 
+  // Manual refresh function for debugging real-time issues
+  const refreshRoom = async () => {
+    if (!roomId) return;
+
+    console.log("Manually refreshing room data...");
+    try {
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("id", roomId)
+        .single();
+
+      if (error) {
+        console.error("Error manually refreshing room:", error);
+        return;
+      }
+
+      console.log("Manual room refresh data:", data);
+      const roomData: Room = {
+        id: data.id,
+        inviteCode: data.invite_code,
+        hostId: data.host_id,
+        players: data.players,
+        gameState: data.game_state,
+        currentWord: data.current_word,
+        timer: data.timer,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+
+      setRoom(roomData);
+      const player = roomData.players.find((p) => p.id === playerId);
+      setCurrentPlayer(player || null);
+
+      setToastMessage("Oda bilgileri güncellendi!");
+      setShowToast(true);
+    } catch (error) {
+      console.error("Manual refresh error:", error);
+    }
+  };
+
   if (!room || !currentPlayer) {
     return (
       <SafeAreaView style={styles.container}>
@@ -317,13 +384,19 @@ export default function Lobby() {
         <View style={styles.header}>
           <Text style={styles.title}>Lobi</Text>
           <Text style={styles.subtitle}>Davet kodu: {inviteCode}</Text>
-          <Button
-            title="Oda Kodunu Kopyala"
-            onPress={copyInviteCode}
-            variant="secondary"
-            size="small"
-            style={styles.shareButton}
-          />
+          <View style={styles.headerButtons}>
+            <Button
+              title="Oda Kodunu Kopyala"
+              onPress={copyInviteCode}
+              variant="secondary"
+              size="small"
+              style={styles.shareButton}
+            />
+            {/* Debug refresh button - can be removed after testing */}
+            <TouchableOpacity onPress={refreshRoom} style={styles.debugRefresh}>
+              <Text style={styles.debugRefreshText}>🔄</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Card>
@@ -479,7 +552,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   shareButton: {
+    // marginTop handled by headerButtons container
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginTop: 8,
+  },
+  debugRefresh: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#e0e7ff",
+    borderWidth: 1,
+    borderColor: "#6366f1",
+  },
+  debugRefreshText: {
+    fontSize: 20,
+    color: "#6366f1",
   },
   sectionTitle: {
     fontSize: 18,

@@ -396,6 +396,15 @@ export class GameService {
     const user = await this.getCurrentUser();
 
     try {
+      console.log(
+        "User",
+        user.id,
+        "attempting to leave room",
+        roomId,
+        "as player",
+        playerId
+      );
+
       // Get room data
       const { data: roomData, error: fetchError } = await supabase
         .from("rooms")
@@ -414,6 +423,11 @@ export class GameService {
         return;
       }
 
+      console.log(
+        "Current room players before leave:",
+        roomData.players.length
+      );
+
       // Find the player
       const playerToRemove = roomData.players.find(
         (p: Player) => p.id === playerId
@@ -427,10 +441,14 @@ export class GameService {
         throw new Error("You can only leave as yourself");
       }
 
+      console.log("Removing player", playerToRemove.name, "from room");
+
       // Remove player from room
       const updatedPlayers = roomData.players.filter(
         (p: Player) => p.id !== playerId
       );
+
+      console.log("Updated players count:", updatedPlayers.length);
 
       if (updatedPlayers.length === 0) {
         // Delete room if empty
@@ -442,36 +460,45 @@ export class GameService {
 
         if (deleteError) {
           console.error("Error deleting room:", deleteError);
+        } else {
+          console.log("Room deleted successfully");
         }
       } else {
         // If the leaving player was the host, assign a new host
         let finalPlayers = updatedPlayers;
         if (playerToRemove.isHost && updatedPlayers.length > 0) {
+          console.log("Transferring host role to", updatedPlayers[0].name);
           finalPlayers = updatedPlayers.map((p: Player, index: number) => ({
             ...p,
             isHost: index === 0,
           }));
         }
 
-        // Update room
+        // Update room with new player list
         console.log(
           "Updating room with remaining players:",
           finalPlayers.length
         );
+        const updateData = {
+          players: finalPlayers,
+          host_id:
+            finalPlayers.find((p: Player) => p.isHost)?.userId ||
+            roomData.host_id,
+          updated_at: new Date().toISOString(),
+        };
+
+        console.log("Update data:", updateData);
+
         const { error: updateError } = await supabase
           .from("rooms")
-          .update({
-            players: finalPlayers,
-            host_id:
-              finalPlayers.find((p: Player) => p.isHost)?.userId ||
-              roomData.host_id,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq("id", roomId);
 
         if (updateError) {
           console.error("Error updating room:", updateError);
           throw new Error("Failed to leave room");
+        } else {
+          console.log("Room updated successfully after player left");
         }
       }
     } catch (error) {
@@ -558,17 +585,23 @@ export class GameService {
             const data = payload.new as any;
             console.log("Processing room data:", data);
 
-            // Validate that we have the essential data
-            if (!data.id || !data.invite_code || !data.players) {
-              console.warn("Incomplete room data received:", data);
+            // More flexible validation - only check for essential fields
+            if (!data.id || !data.invite_code) {
+              console.warn(
+                "Incomplete room data received (missing id or invite_code):",
+                data
+              );
               return;
             }
+
+            // Handle players array properly - it might be empty but should still be an array
+            const players = Array.isArray(data.players) ? data.players : [];
 
             const room: Room = {
               id: data.id,
               inviteCode: data.invite_code,
               hostId: data.host_id,
-              players: data.players || [],
+              players: players,
               gameState: data.game_state || "waiting",
               currentWord: data.current_word,
               timer: data.timer || 480,
@@ -576,7 +609,12 @@ export class GameService {
               updatedAt: data.updated_at,
             };
 
-            console.log("Mapped room object:", room);
+            console.log(
+              "Mapped room object with",
+              players.length,
+              "players:",
+              room
+            );
             callback(room);
           } else if (payload.old && payload.eventType === "DELETE") {
             // Room was deleted, handle this case
