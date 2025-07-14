@@ -126,7 +126,7 @@ export class GameService {
   private static async getCurrentUser(): Promise<User> {
     const user = await UserService.getCurrentUser();
     if (!user) {
-      throw new Error("No user profile found");
+      throw new Error("Kullanıcı bulunamadı");
     }
     return user;
   }

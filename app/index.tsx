@@ -60,6 +60,17 @@ export default function Index() {
     }
   };
 
+  const resetApp = async () => {
+    try {
+      await AsyncStorage.removeItem(USER_STORAGE_KEY);
+      setUser(null);
+      router.push("/profile");
+    } catch (error) {
+      console.error("Error resetting app:", error);
+      Alert.alert("Hata", "Uygulama sıfırlanamadı");
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -93,6 +104,14 @@ export default function Index() {
             variant="secondary"
             size="large"
             style={styles.button}
+          />
+
+          <Button
+            title="Uygulamayı Sıfırla"
+            onPress={resetApp}
+            variant="secondary"
+            size="small"
+            style={styles.resetButton}
           />
         </View>
       </View>
@@ -136,6 +155,10 @@ const styles = StyleSheet.create({
   },
   button: {
     width: "100%",
+  },
+  resetButton: {
+    width: "100%",
+    marginTop: 20,
   },
   profileSection: {
     alignItems: "center",
