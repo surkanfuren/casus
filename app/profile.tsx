@@ -1,8 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -19,6 +19,20 @@ import { User, UserService } from "../services/UserService";
 
 const USER_STORAGE_KEY = "@casus_user";
 
+// Helper function to store user data without profile_photo to avoid caching issues
+const storeUserWithoutPhoto = async (user: User) => {
+  const userWithoutPhoto = {
+    id: user.id,
+    name: user.name,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+  };
+  await AsyncStorage.setItem(
+    USER_STORAGE_KEY,
+    JSON.stringify(userWithoutPhoto)
+  );
+};
+
 export default function Profile() {
   const [name, setName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -30,17 +44,49 @@ export default function Profile() {
     initializeUser();
   }, []);
 
+  // Refresh profile data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const refreshUserData = async () => {
+        try {
+          const user = await UserService.getCurrentUser();
+          if (user) {
+            setExistingUser(user);
+            setName(user.name);
+            setProfilePhoto(user.profile_photo || null);
+            console.log(
+              "[DEBUG] useFocusEffect - profilePhoto refreshed to:",
+              user.profile_photo || null
+            );
+          } else {
+            console.log("[DEBUG] useFocusEffect - no user found");
+          }
+        } catch (error) {
+          console.error("Error refreshing user data:", error);
+        }
+      };
+
+      refreshUserData();
+    }, [])
+  );
+
   const initializeUser = async () => {
     try {
       // First, fix old format device IDs if needed
       await UserService.fixOldFormatDeviceId();
 
-      // Then try to load existing user
+      // Then try to load existing user from database (always fetch fresh data)
       const user = await UserService.getCurrentUser();
       if (user) {
         setExistingUser(user);
         setName(user.name);
         setProfilePhoto(user.profile_photo || null);
+        console.log(
+          "[DEBUG] initializeUser - profilePhoto set to:",
+          user.profile_photo || null
+        );
+      } else {
+        console.log("[DEBUG] initializeUser - no user found");
       }
     } catch (error) {
       console.error("Error initializing user:", error);
@@ -72,6 +118,10 @@ export default function Profile() {
 
     if (!result.canceled && result.assets[0]) {
       setProfilePhoto(result.assets[0].uri);
+      console.log(
+        "[DEBUG] pickImage - profilePhoto set to:",
+        result.assets[0].uri
+      );
     }
   };
 
@@ -93,10 +143,18 @@ export default function Profile() {
 
     if (!result.canceled && result.assets[0]) {
       setProfilePhoto(result.assets[0].uri);
+      console.log(
+        "[DEBUG] takePhoto - profilePhoto set to:",
+        result.assets[0].uri
+      );
     }
   };
 
   const showPhotoOptions = () => {
+    console.log(
+      "[DEBUG] showPhotoOptions - current profilePhoto:",
+      profilePhoto
+    );
     Alert.alert("Profil Fotoğrafı", "Fotoğrafınızı nasıl eklemek istersiniz?", [
       { text: "İptal", style: "cancel" },
       { text: "Galeriden Seç", onPress: pickImage },
@@ -105,7 +163,12 @@ export default function Profile() {
         ? [
             {
               text: "Fotoğrafı Kaldır",
-              onPress: () => setProfilePhoto(null),
+              onPress: () => {
+                setProfilePhoto(null);
+                console.log(
+                  "[DEBUG] showPhotoOptions - profilePhoto removed, set to null"
+                );
+              },
               style: "destructive" as const,
             },
           ]
@@ -132,8 +195,8 @@ export default function Profile() {
         profilePhoto || undefined
       );
 
-      // Store user data locally
-      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      // Store user data locally (without profile_photo to avoid caching)
+      await storeUserWithoutPhoto(user);
 
       // Navigate to main screen
       router.push("/");
@@ -148,6 +211,11 @@ export default function Profile() {
   const updateProfilePhoto = async () => {
     if (!existingUser || !profilePhoto) return;
 
+    console.log(
+      "[DEBUG] updateProfilePhoto - starting with profilePhoto:",
+      profilePhoto
+    );
+
     // Ensure we're only uploading local file URIs, not remote URLs
     if (
       profilePhoto.startsWith("http://") ||
@@ -161,17 +229,21 @@ export default function Profile() {
     setIsUploadingPhoto(true);
     try {
       console.log("Uploading photo from URI:", profilePhoto);
-      const updatedUser = await UserService.updateProfilePhoto(
-        existingUser.id,
-        profilePhoto
-      );
-      setExistingUser(updatedUser);
+      await UserService.updateProfilePhoto(existingUser.id, profilePhoto);
 
-      // Update the local profilePhoto state to match the new storage URL
-      setProfilePhoto(updatedUser.profile_photo || null);
+      // Refetch fresh user data from database to get the latest profile photo URL
+      const freshUser = await UserService.getCurrentUser();
+      if (freshUser) {
+        setExistingUser(freshUser);
+        setProfilePhoto(freshUser.profile_photo || null);
+        console.log(
+          "[DEBUG] updateProfilePhoto - after update, profilePhoto set to:",
+          freshUser.profile_photo || null
+        );
 
-      // Update local storage
-      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+        // Update local storage (without profile_photo to avoid caching)
+        await storeUserWithoutPhoto(freshUser);
+      }
 
       Alert.alert("Başarılı", "Profil fotoğrafınız güncellendi");
     } catch (error: any) {
@@ -196,17 +268,21 @@ export default function Profile() {
           onPress: async () => {
             setIsUploadingPhoto(true);
             try {
-              const updatedUser = await UserService.removeProfilePhoto(
-                existingUser.id
-              );
-              setExistingUser(updatedUser);
-              setProfilePhoto(null);
+              await UserService.removeProfilePhoto(existingUser.id);
 
-              // Update local storage
-              await AsyncStorage.setItem(
-                USER_STORAGE_KEY,
-                JSON.stringify(updatedUser)
-              );
+              // Refetch fresh user data from database to ensure clean state
+              const freshUser = await UserService.getCurrentUser();
+              if (freshUser) {
+                setExistingUser(freshUser);
+                setProfilePhoto(freshUser.profile_photo || null);
+                console.log(
+                  "[DEBUG] removeProfilePhoto - after removal, profilePhoto set to:",
+                  freshUser.profile_photo || null
+                );
+
+                // Update local storage (without profile_photo to avoid caching)
+                await storeUserWithoutPhoto(freshUser);
+              }
 
               Alert.alert("Başarılı", "Profil fotoğrafınız kaldırıldı");
             } catch (error: any) {
@@ -232,6 +308,13 @@ export default function Profile() {
     !profilePhoto.startsWith("http://") &&
     !profilePhoto.startsWith("https://");
 
+  console.log("[DEBUG] render - current profilePhoto:", profilePhoto);
+  console.log(
+    "[DEBUG] render - existingUser profile_photo:",
+    existingUser?.profile_photo || null
+  );
+  console.log("[DEBUG] render - hasPhotoChanged:", hasPhotoChanged);
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
@@ -253,11 +336,32 @@ export default function Profile() {
                 onPress={showPhotoOptions}
               >
                 {profilePhoto ? (
-                  <Image
-                    source={{ uri: profilePhoto }}
-                    style={styles.profilePhoto}
-                    contentFit="cover"
-                  />
+                  <>
+                    {console.log(
+                      "[DEBUG] rendering Image with URI:",
+                      profilePhoto
+                    )}
+                    {(() => {
+                      const cacheBustedUri =
+                        profilePhoto +
+                        (profilePhoto.includes("?") ? "&" : "?") +
+                        "t=" +
+                        Date.now();
+                      console.log(
+                        "[DEBUG] final cache-busted URI:",
+                        cacheBustedUri
+                      );
+                      return (
+                        <Image
+                          source={{ uri: cacheBustedUri }}
+                          style={styles.profilePhoto}
+                          contentFit="cover"
+                          cachePolicy="none"
+                          recyclingKey={profilePhoto + "_" + Date.now()}
+                        />
+                      );
+                    })()}
+                  </>
                 ) : (
                   <View style={styles.photoPlaceholder}>
                     <Text style={styles.photoPlaceholderText}>

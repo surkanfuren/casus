@@ -413,11 +413,30 @@ export default function Lobby() {
                 )}
                 <View style={styles.playerPhotoContainer}>
                   {player.profilePhoto ? (
-                    <Image
-                      source={{ uri: player.profilePhoto }}
-                      style={styles.playerPhoto}
-                      contentFit="cover"
-                    />
+                    (() => {
+                      const cacheBustedUri =
+                        player.profilePhoto +
+                        (player.profilePhoto.includes("?") ? "&" : "?") +
+                        "t=" +
+                        Date.now();
+                      console.log(
+                        "[DEBUG] lobby player photo URI:",
+                        player.profilePhoto
+                      );
+                      console.log(
+                        "[DEBUG] lobby cache-busted URI:",
+                        cacheBustedUri
+                      );
+                      return (
+                        <Image
+                          source={{ uri: cacheBustedUri }}
+                          style={styles.playerPhoto}
+                          contentFit="cover"
+                          cachePolicy="none"
+                          recyclingKey={player.profilePhoto + "_" + Date.now()}
+                        />
+                      );
+                    })()
                   ) : (
                     <View style={styles.playerPhotoPlaceholder}>
                       <Text style={styles.playerPhotoInitial}>
