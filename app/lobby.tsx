@@ -73,6 +73,7 @@ export default function Lobby() {
           gameState: data.game_state,
           currentWord: data.current_word,
           timer: data.timer,
+          gameStartedAt: data.game_started_at || null,
           createdAt: data.created_at,
           updatedAt: data.updated_at,
         };
@@ -84,7 +85,7 @@ export default function Lobby() {
 
         // If game already started, navigate to game screen
         if (roomData.gameState === "playing") {
-          router.push({
+          router.replace({
             pathname: "/game",
             params: {
               roomId: roomData.id,
@@ -142,7 +143,7 @@ export default function Lobby() {
 
       // If game started, navigate to game screen
       if (updatedRoom.gameState === "playing") {
-        router.push({
+        router.replace({
           pathname: "/game",
           params: {
             roomId: updatedRoom.id,
@@ -284,6 +285,7 @@ export default function Lobby() {
         gameState: data.game_state,
         currentWord: data.current_word,
         timer: data.timer,
+        gameStartedAt: data.game_started_at || null,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
       };

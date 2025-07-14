@@ -177,6 +177,7 @@ export class GameService {
       gameState: data.game_state,
       currentWord: data.current_word,
       timer: data.timer,
+      gameStartedAt: data.game_started_at || null,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
@@ -226,6 +227,7 @@ export class GameService {
         gameState: roomData.game_state,
         currentWord: roomData.current_word,
         timer: roomData.timer,
+        gameStartedAt: roomData.game_started_at || null,
         createdAt: roomData.created_at,
         updatedAt: roomData.updated_at,
       };
@@ -269,6 +271,7 @@ export class GameService {
       gameState: updatedRoom.game_state,
       currentWord: updatedRoom.current_word,
       timer: updatedRoom.timer,
+      gameStartedAt: updatedRoom.game_started_at || null,
       createdAt: updatedRoom.created_at,
       updatedAt: updatedRoom.updated_at,
     };
@@ -284,6 +287,8 @@ export class GameService {
     hostId: string,
     timerMinutes: number
   ): Promise<void> {
+    console.log("updateRoomTimer called:", { roomId, hostId, timerMinutes });
+
     const user = await this.getCurrentUser();
 
     if (user.id !== hostId) {
@@ -291,6 +296,7 @@ export class GameService {
     }
 
     const timerSeconds = timerMinutes * 60;
+    console.log("Converting timer:", { timerMinutes, timerSeconds });
 
     try {
       // Get room data first to verify host
@@ -371,14 +377,16 @@ export class GameService {
     const randomLocation =
       SPYFALL_LOCATIONS[Math.floor(Math.random() * SPYFALL_LOCATIONS.length)];
 
-    // Update room
+    // Update room (keep existing timer value, don't reset it)
+    // Note: game_started_at will be added once database migration is run
     const { error: updateError } = await supabase
       .from("rooms")
       .update({
         players: updatedPlayers,
         game_state: "playing",
         current_word: randomLocation,
-        timer: 480, // Reset timer to 8 minutes
+        // TODO: Add game_started_at: new Date().toISOString() after running migration
+        // Keep the existing timer value that was set in lobby
         updated_at: new Date().toISOString(),
       })
       .eq("id", roomId);
@@ -605,6 +613,7 @@ export class GameService {
               gameState: data.game_state || "waiting",
               currentWord: data.current_word,
               timer: data.timer || 480,
+              gameStartedAt: data.game_started_at || null,
               createdAt: data.created_at,
               updatedAt: data.updated_at,
             };

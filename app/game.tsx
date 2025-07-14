@@ -57,7 +57,23 @@ export default function Game() {
         }
 
         console.log("Game room data fetched:", data);
-        setRoom(data);
+
+        // Map database fields to Room interface
+        const roomData: Room = {
+          id: data.id,
+          inviteCode: data.invite_code,
+          hostId: data.host_id,
+          players: data.players,
+          gameState: data.game_state,
+          currentWord: data.current_word,
+          timer: data.timer,
+          gameStartedAt: data.game_started_at || null,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        };
+
+        console.log("Mapped room data:", roomData);
+        setRoom(roomData);
       } catch (err) {
         console.error("Game room fetch error:", err);
         Alert.alert("Error", "Could not connect to game");
@@ -80,7 +96,7 @@ export default function Game() {
 
       // If game finished, navigate to results
       if (updatedRoom.gameState === "finished") {
-        router.push({
+        router.replace({
           pathname: "/results",
           params: {
             roomId: updatedRoom.id,
@@ -110,7 +126,7 @@ export default function Game() {
         {
           text: "OK",
           onPress: () => {
-            router.push({
+            router.replace({
               pathname: "/results",
               params: {
                 roomId: roomId,
@@ -229,11 +245,20 @@ export default function Game() {
     );
   }
 
+  // Debug timer values
+  console.log("Game Timer Debug:", {
+    roomTimer: room.timer,
+    gameState: room.gameState,
+    isRunning: room.gameState === "playing",
+    gameStartedAt: room.gameStartedAt,
+  });
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
         <Timer
           initialTime={room.timer}
+          gameStartedAt={room.gameStartedAt || null}
           onTimeUp={handleTimeUp}
           isRunning={room.gameState === "playing"}
         />

@@ -24,6 +24,7 @@ export interface Room {
   gameState: "waiting" | "playing" | "voting" | "finished";
   currentWord: string | null;
   timer: number;
+  gameStartedAt?: string | null; // Optional until database migration is run
   createdAt: string;
   updatedAt: string;
 }
