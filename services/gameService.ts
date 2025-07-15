@@ -1,4 +1,5 @@
 import { Player, Room } from "../types";
+import { getRandomSpy } from "../utils/constants";
 import { supabase } from "./supabase";
 import { User, UserService } from "./UserService";
 
@@ -727,12 +728,12 @@ export class GameService {
       throw new Error("At least 3 players are required to start the game");
     }
 
-    // Select random spy
+    // Select random spy using the utility function
     const players = [...roomData.players];
-    const spyIndex = Math.floor(Math.random() * players.length);
-    const updatedPlayers = players.map((player, index) => ({
+    const randomSpyId = getRandomSpy(players);
+    const updatedPlayers = players.map((player) => ({
       ...player,
-      isSpy: index === spyIndex,
+      isSpy: player.id === randomSpyId,
       hasVoted: false,
     }));
 
