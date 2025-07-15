@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,6 +31,7 @@ export default function Game() {
   const [selectedVote, setSelectedVote] = useState<string | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [loadingOpacity] = useState(new Animated.Value(0));
+  const [isLocationCardHidden, setIsLocationCardHidden] = useState(true);
 
   useEffect(() => {
     if (!roomId || !playerId) return;
@@ -52,7 +54,7 @@ export default function Game() {
 
         if (error) {
           console.error("Error fetching game room:", error);
-          Alert.alert("Error", "Could not load game data");
+          Alert.alert("Hata", "Oyun verileri yüklenemedi");
           return;
         }
 
@@ -76,7 +78,7 @@ export default function Game() {
         setRoom(roomData);
       } catch (err) {
         console.error("Game room fetch error:", err);
-        Alert.alert("Error", "Could not connect to game");
+        Alert.alert("Hata", "Oyuna bağlanılamadı");
       }
     };
 
@@ -120,11 +122,11 @@ export default function Game() {
 
   const handleTimeUp = () => {
     Alert.alert(
-      "Time's Up!",
-      "Time has run out! The spy wins if they haven't been identified.",
+      "Süre Doldu!",
+      "Zaman tükendi! Casus bulunamadıysa casuslar kazandı.",
       [
         {
-          text: "OK",
+          text: "Tamam",
           onPress: () => {
             router.replace({
               pathname: "/results",
@@ -151,7 +153,7 @@ export default function Game() {
       await GameService.submitVote(room.id, currentPlayer.id, selectedVote);
       setShowVoting(false);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to submit vote");
+      Alert.alert("Hata", error.message || "Oy gönderilemedi");
     } finally {
       setIsVoting(false);
     }
@@ -263,20 +265,29 @@ export default function Game() {
           isRunning={room.gameState === "playing"}
         />
 
-        <Card style={styles.locationCard}>
-          <Text style={styles.locationTitle}>
-            {currentPlayer.isSpy ? "You are the SPY!" : "Location"}
-          </Text>
-          <Text style={styles.locationText}>
-            {currentPlayer.isSpy
-              ? "Figure out the location without being caught!"
-              : room.currentWord}
-          </Text>
-        </Card>
+        <TouchableOpacity
+          onPress={() => setIsLocationCardHidden(!isLocationCardHidden)}
+          style={styles.locationCardContainer}
+        >
+          <Card style={styles.locationCard}>
+            <Text style={styles.locationTitle}>
+              {currentPlayer.isSpy ? "Kelime" : "Kelime"}
+            </Text>
+            {!isLocationCardHidden ? (
+              <Text style={styles.locationText}>
+                {currentPlayer.isSpy ? "CASUS SENSİN" : room.currentWord}
+              </Text>
+            ) : (
+              <Text style={styles.hiddenLocationText}>
+                Görüntülemek için dokunun
+              </Text>
+            )}
+          </Card>
+        </TouchableOpacity>
 
         <Card>
           <Text style={styles.sectionTitle}>
-            Players ({room.players?.length || 0})
+            Oyuncular ({room.players?.length || 0})
           </Text>
           {room.players?.map((player) => (
             <View key={player.id} style={styles.playerItem}>
@@ -299,7 +310,7 @@ export default function Game() {
                 <View style={styles.playerInfo}>
                   <Text style={styles.playerName}>
                     {player.name}
-                    {player.id === currentPlayer.id && " (You)"}
+                    {player.id === currentPlayer.id && " (Sen)"}
                     {player.hasVoted && " ✓"}
                   </Text>
                 </View>
@@ -310,7 +321,7 @@ export default function Game() {
 
         {!showVoting && (
           <Button
-            title="Start Voting"
+            title="Oylamayı Başlat"
             onPress={startVoting}
             size="large"
             style={styles.button}
@@ -319,9 +330,9 @@ export default function Game() {
 
         {showVoting && (
           <Card>
-            <Text style={styles.sectionTitle}>Vote for the Spy</Text>
+            <Text style={styles.sectionTitle}>Casus için Oy Ver</Text>
             <Text style={styles.voteInstructions}>
-              Select who you think is the spy:
+              Casus olduğunu düşündüğün kişiyi seç:
             </Text>
             {otherPlayers.map((player) => (
               <Button
@@ -333,7 +344,7 @@ export default function Game() {
               />
             ))}
             <Button
-              title={isVoting ? "Submitting Vote..." : "Submit Vote"}
+              title={isVoting ? "Oy Gönderiliyor..." : "Oy Gönder"}
               onPress={submitVote}
               disabled={!selectedVote || isVoting}
               size="large"
@@ -354,6 +365,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    paddingTop: 60,
   },
   loading: {
     fontSize: 18,
@@ -367,8 +379,15 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: "#9ca3af",
   },
-  locationCard: {
+  locationCardContainer: {
     marginBottom: 20,
+  },
+  locationCard: {
+    padding: 15,
+    backgroundColor: "#e0e7ff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
   },
   locationTitle: {
     fontSize: 20,
@@ -378,8 +397,13 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 16,
-    color: "#6b7280",
+    color: "#374151",
     lineHeight: 22,
+  },
+  hiddenLocationText: {
+    fontSize: 16,
+    color: "#9ca3af",
+    textAlign: "center",
   },
   sectionTitle: {
     fontSize: 18,

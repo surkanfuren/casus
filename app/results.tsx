@@ -145,23 +145,6 @@ export default function Results() {
           </Card>
 
           {/* Game Summary Card */}
-          <Card style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Oyun Özeti</Text>
-            <View style={styles.summaryContent}>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryIcon}>🎯</Text>
-                <Text style={styles.summaryText}>Spyfall tamamlandı</Text>
-              </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryIcon}>⏱️</Text>
-                <Text style={styles.summaryText}>8 dakika oyun</Text>
-              </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryIcon}>🗳️</Text>
-                <Text style={styles.summaryText}>Oylama tamamlandı</Text>
-              </View>
-            </View>
-          </Card>
 
           {/* Action Button */}
           <View style={styles.loadingActions}>
@@ -189,26 +172,15 @@ export default function Results() {
       <ScrollView style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Oyun Sonuçları</Text>
+          <Text style={styles.spyReveal}>
+            CASUS: {spy?.name || "Bilinmiyor"}
+          </Text>
           <Text
             style={[styles.result, { color: spyWins ? "#ef4444" : "#10b981" }]}
           >
             {spyWins ? "CASUS KAZANDI!" : "OYUNCULAR KAZANDI!"}
           </Text>
         </View>
-
-        <Card>
-          <Text style={styles.sectionTitle}>Oyun Özeti</Text>
-          <Text style={styles.summary}>
-            Lokasyon: {room.currentWord}
-            {"\n"}
-            Casus: {spy?.name || "Bilinmiyor"}
-            {"\n"}
-            Oyuncu Sayısı: {room.players?.length || 0}
-            {"\n"}
-            Oyun Süresi: {Math.floor((480 - room.timer) / 60)} dakika{" "}
-            {(480 - room.timer) % 60} saniye
-          </Text>
-        </Card>
 
         <Card>
           <Text style={styles.sectionTitle}>Oyuncular</Text>
@@ -278,6 +250,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  spyReveal: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#ef4444",
+    textAlign: "center",
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
