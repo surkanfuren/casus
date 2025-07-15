@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -225,10 +225,6 @@ export default function Game() {
                 <Text style={styles.ruleIcon}>🤐</Text>
                 <Text style={styles.ruleText}>Lokasyonu gizle</Text>
               </View>
-              <View style={styles.ruleItem}>
-                <Text style={styles.ruleIcon}>🗳️</Text>
-                <Text style={styles.ruleText}>Oylama yap</Text>
-              </View>
             </View>
           </Card>
 
@@ -256,104 +252,111 @@ export default function Game() {
   });
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.content}>
-        <Timer
-          initialTime={room.timer}
-          gameStartedAt={room.gameStartedAt || null}
-          onTimeUp={handleTimeUp}
-          isRunning={room.gameState === "playing"}
-        />
+    <>
+      <Stack.Screen
+        options={{
+          gestureEnabled: false,
+          headerShown: false,
+        }}
+      />
+      <View style={styles.container}>
+        <ScrollView style={styles.content}>
+          <Timer
+            initialTime={room.timer}
+            gameStartedAt={room.gameStartedAt || null}
+            onTimeUp={handleTimeUp}
+            isRunning={room.gameState === "playing"}
+          />
 
-        <TouchableOpacity
-          onPress={() => setIsLocationCardHidden(!isLocationCardHidden)}
-          style={styles.locationCardContainer}
-        >
-          <Card style={styles.locationCard}>
-            <Text style={styles.locationTitle}>
-              {currentPlayer.isSpy ? "Kelime" : "Kelime"}
+          <TouchableOpacity
+            onPress={() => setIsLocationCardHidden(!isLocationCardHidden)}
+            style={styles.locationCardContainer}
+          >
+            <Card style={styles.locationCard}>
+              <Text style={styles.locationTitle}>
+                {currentPlayer.isSpy ? "Kelime" : "Kelime"}
+              </Text>
+              {!isLocationCardHidden ? (
+                <Text style={styles.locationText}>
+                  {currentPlayer.isSpy ? "CASUS SENSİN" : room.currentWord}
+                </Text>
+              ) : (
+                <Text style={styles.hiddenLocationText}>
+                  Görüntülemek için dokunun
+                </Text>
+              )}
+            </Card>
+          </TouchableOpacity>
+
+          <Card>
+            <Text style={styles.sectionTitle}>
+              Oyuncular ({room.players?.length || 0})
             </Text>
-            {!isLocationCardHidden ? (
-              <Text style={styles.locationText}>
-                {currentPlayer.isSpy ? "CASUS SENSİN" : room.currentWord}
-              </Text>
-            ) : (
-              <Text style={styles.hiddenLocationText}>
-                Görüntülemek için dokunun
-              </Text>
-            )}
-          </Card>
-        </TouchableOpacity>
-
-        <Card>
-          <Text style={styles.sectionTitle}>
-            Oyuncular ({room.players?.length || 0})
-          </Text>
-          {room.players?.map((player) => (
-            <View key={player.id} style={styles.playerItem}>
-              <View style={styles.playerContent}>
-                <View style={styles.playerPhotoContainer}>
-                  {player.profilePhoto ? (
-                    <Image
-                      source={{ uri: player.profilePhoto }}
-                      style={styles.playerPhoto}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View style={styles.playerPhotoPlaceholder}>
-                      <Text style={styles.playerPhotoInitial}>
-                        {player.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View style={styles.playerInfo}>
-                  <Text style={styles.playerName}>
-                    {player.name}
-                    {player.id === currentPlayer.id && " (Sen)"}
-                    {player.hasVoted && " ✓"}
-                  </Text>
+            {room.players?.map((player) => (
+              <View key={player.id} style={styles.playerItem}>
+                <View style={styles.playerContent}>
+                  <View style={styles.playerPhotoContainer}>
+                    {player.profilePhoto ? (
+                      <Image
+                        source={{ uri: player.profilePhoto }}
+                        style={styles.playerPhoto}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View style={styles.playerPhotoPlaceholder}>
+                        <Text style={styles.playerPhotoInitial}>
+                          {player.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.playerInfo}>
+                    <Text style={styles.playerName}>
+                      {player.name}
+                      {player.id === currentPlayer.id && " (Sen)"}
+                      {player.hasVoted && " ✓"}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          )) || []}
-        </Card>
-
-        {!showVoting && (
-          <Button
-            title="Oylamayı Başlat"
-            onPress={startVoting}
-            size="large"
-            style={styles.button}
-          />
-        )}
-
-        {showVoting && (
-          <Card>
-            <Text style={styles.sectionTitle}>Casus için Oy Ver</Text>
-            <Text style={styles.voteInstructions}>
-              Casus olduğunu düşündüğün kişiyi seç:
-            </Text>
-            {otherPlayers.map((player) => (
-              <Button
-                key={player.id}
-                title={player.name}
-                onPress={() => setSelectedVote(player.id)}
-                variant={selectedVote === player.id ? "primary" : "secondary"}
-                style={styles.voteButton}
-              />
-            ))}
-            <Button
-              title={isVoting ? "Oy Gönderiliyor..." : "Oy Gönder"}
-              onPress={submitVote}
-              disabled={!selectedVote || isVoting}
-              size="large"
-              style={styles.button}
-            />
+            )) || []}
           </Card>
-        )}
-      </ScrollView>
-    </View>
+
+          {showVoting && (
+            <Card>
+              <Text style={styles.sectionTitle}>Casus için Oy Ver</Text>
+              <Text style={styles.voteInstructions}>
+                Casus olduğunu düşündüğün kişiyi seç:
+              </Text>
+              {otherPlayers.map((player) => (
+                <Button
+                  key={player.id}
+                  title={player.name}
+                  onPress={() => setSelectedVote(player.id)}
+                  variant={selectedVote === player.id ? "primary" : "secondary"}
+                  style={styles.voteButton}
+                />
+              ))}
+              <Button
+                title={isVoting ? "Oy Gönderiliyor..." : "Oy Gönder"}
+                onPress={submitVote}
+                disabled={!selectedVote || isVoting}
+                size="large"
+                style={styles.button}
+              />
+            </Card>
+          )}
+
+          <Button
+            title="Ana Sayfaya Dön"
+            onPress={() => router.replace("/")}
+            variant="secondary"
+            size="large"
+            style={styles.homeButton}
+          />
+        </ScrollView>
+      </View>
+    </>
   );
 }
 
@@ -462,6 +465,11 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 16,
+    width: "100%",
+  },
+  homeButton: {
+    marginTop: 24,
+    marginBottom: 20,
     width: "100%",
   },
   loadingContainer: {
